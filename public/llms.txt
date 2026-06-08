@@ -6,3 +6,5 @@ PollMeNow is a social polling platform where users can create, share, and vote o
 - Explore polls: https://pollmenow.com/explore
 - Create a poll: https://pollmenow.com/create
 - Pricing: https://pollmenow.com/upgrade
+- FAQ: https://pollmenow.com/faq
+- Contact: https://pollmenow.com/contact

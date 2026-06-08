@@ -1,0 +1,45 @@
+# PollMeNow – Complete AI‑Readable Documentation
+
+## Platform Overview
+PollMeNow is an AI‑powered polling platform where users can create, share, and vote on polls in real time. The platform uses generative AI to create unbiased poll questions and options from a simple topic description.
+
+## Key Features
+- AI Poll Generation: Type any topic – AI writes the question and up to 6 balanced options in under 10 seconds.
+- Real‑Time Results: Votes update instantly without page refresh.
+- Flexible Privacy: Public, friends‑only, or private polls with access codes.
+- Viral Sharing: One‑click share on social media, email, WhatsApp, and embed widgets.
+- Audience Targeting (Premium): Reach specific age groups, genders, or countries.
+- Advanced Analytics (Premium): Demographics, engagement rates, CSV exports.
+- Rich Media: Add images to questions or poll options.
+- Anonymous Voting: Allow votes without login.
+- Team Management (Organization): Role‑based access for admins, poll managers, analysts.
+
+## Page Structure
+- Home: `/` – Marketing landing page with feature overview and pricing.
+- Explore: `/explore` – Browse trending, live, premium, and friend polls.
+- Search: `/search` – Find polls by keyword, topic, or creator.
+- Create Poll: `/create` – Form with AI assistant, media upload, targeting, scheduling.
+- Poll Page: `/poll/[id]` – Voting interface, results, sharing, analytics preview.
+- Dashboard: `/dashboard` – Manage own polls, view vote history, analytics.
+- Profile: `/profile/[id]` – User profile with polls, followers, achievements.
+- Team Management: `/team` – Manage organization members and roles (organization accounts only).
+- Upgrade: `/upgrade` – Stripe checkout for Premium / Organization plans.
+
+## API Endpoints (for AI agents)
+- Sitemap: `/sitemap.xml` – Lists all public poll URLs.
+- Robots.txt: `/robots.txt` – Allows GPTBot, ClaudeBot, PerplexityBot, Google‑Extended.
+
+## Important URLs
+- Home: https://pollmenow.com/
+- Explore: https://pollmenow.com/explore
+- Create Poll: https://pollmenow.com/create
+- Pricing: https://pollmenow.com/upgrade
+- FAQ: https://pollmenow.com/faq
+- Contact: https://pollmenow.com/contact
+- Privacy Policy: https://pollmenow.com/privacy
+- Terms of Service: https://pollmenow.com/terms
+
+## Contact
+Support: support@pollmenow.com
+Legal: legal@pollmenow.com
+Partnerships: partners@pollmenow.com

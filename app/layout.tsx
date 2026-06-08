@@ -24,6 +24,30 @@ const dmMono = DM_Mono({
 export const metadata = {
   title: 'PollMeNow – Create AI‑powered polls, get real‑time insights',
   description: 'Create, share, and vote on polls with real-time analytics and AI assistance.',
+  openGraph: {
+    title: 'PollMeNow – Create AI‑powered polls, get real‑time insights',
+    description: 'Create, share, and vote on polls with real-time analytics and AI assistance.',
+    url: 'https://www.pollmenow.com',
+    siteName: 'PollMeNow',
+    images: [
+      {
+        url: 'https://www.pollmenow.com/og-image.png',
+        width: 1200,
+        height: 630,
+        alt: 'PollMeNow – AI-powered polling platform',
+      },
+    ],
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'PollMeNow – Create AI‑powered polls, get real‑time insights',
+    description: 'Create, share, and vote on polls with real-time analytics and AI assistance.',
+    images: ['https://www.pollmenow.com/og-image.png'],
+  },
+  alternates: {
+    canonical: 'https://www.pollmenow.com',
+  },
 };
 
 export default function RootLayout({

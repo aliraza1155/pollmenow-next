@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import Script from 'next/script';
 import {
   Zap, Brain, Users, Clock, ArrowRight, BarChart3, Shield, Globe,
   Sparkles, Target, Lock, Share2, Award, DollarSign, CheckCircle,
@@ -322,18 +323,45 @@ function FinalCTA() {
 
 // ------------------------- Main Export -------------------------
 export default function HomePage() {
+  const organizationSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "PollMeNow",
+    "url": "https://www.pollmenow.com",
+    "logo": "https://www.pollmenow.com/logo.png",
+    "sameAs": [
+      "https://twitter.com/pollmenow",
+      "https://linkedin.com/company/pollmenow",
+      "https://github.com/pollmenow"
+    ],
+    "description": "Create, share, and vote on polls with real-time analytics and AI assistance.",
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "email": "support@pollmenow.com",
+      "contactType": "customer support"
+    }
+  };
+
   return (
     <ErrorBoundary>
-      <div className="overflow-hidden">
-        <HeroSection />
-        <AISpotlight />
-        <FeaturesGrid />
-        <PersonaSections />
-        <HowItWorks />
-        <Pricing />
-        <MonetizationSpotlight />
-        <FinalCTA />
-      </div>
+      <>
+        <Script
+          id="organization-schema"
+          type="application/ld+json"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+        />
+        <div className="overflow-hidden">
+          <HeroSection />
+          <AISpotlight />
+          <FeaturesGrid />
+          <PersonaSections />
+          <HowItWorks />
+          <Pricing />
+          <MonetizationSpotlight />
+          <FinalCTA />
+        </div>
+      </>
     </ErrorBoundary>
   );
 }

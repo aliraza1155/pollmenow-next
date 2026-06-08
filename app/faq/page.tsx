@@ -1,7 +1,9 @@
+// app/faq/page.tsx
 'use client';
 
 import { motion } from 'framer-motion';
 import { HelpCircle } from 'lucide-react';
+import Script from 'next/script';
 
 const faqs = [
   {
@@ -30,36 +32,57 @@ const faqs = [
   },
 ];
 
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": faqs.map(faq => ({
+    "@type": "Question",
+    "name": faq.q,
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": faq.a
+    }
+  }))
+};
+
 export default function FAQPage() {
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6">
-      <div className="max-w-3xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8"
-        >
-          <div className="text-center mb-8">
-            <HelpCircle className="w-10 h-10 text-primary mx-auto mb-2" />
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Frequently Asked Questions</h1>
-            <p className="text-gray-500 text-sm">Find quick answers to common questions</p>
-          </div>
-          <div className="space-y-6">
-            {faqs.map((faq, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="border-b border-gray-100 pb-4 last:border-0"
-              >
-                <h3 className="text-lg font-semibold text-gray-800 mb-1">{faq.q}</h3>
-                <p className="text-gray-600 text-sm">{faq.a}</p>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
+    <>
+      <Script
+        id="faq-schema"
+        type="application/ld+json"
+        strategy="afterInteractive"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
+      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6">
+        <div className="max-w-3xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8"
+          >
+            <div className="text-center mb-8">
+              <HelpCircle className="w-10 h-10 text-primary mx-auto mb-2" />
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Frequently Asked Questions</h1>
+              <p className="text-gray-500 text-sm">Find quick answers to common questions</p>
+            </div>
+            <div className="space-y-6">
+              {faqs.map((faq, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="border-b border-gray-100 pb-4 last:border-0"
+                >
+                  <h3 className="text-lg font-semibold text-gray-800 mb-1">{faq.q}</h3>
+                  <p className="text-gray-600 text-sm">{faq.a}</p>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
