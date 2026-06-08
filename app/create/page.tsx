@@ -1,6 +1,7 @@
 // app/create/page.tsx
 'use client';
 
+import { Suspense } from 'react';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -91,7 +92,8 @@ function Modal({ children, onClose }: { children: React.ReactNode; onClose: () =
   );
 }
 
-export default function CreatePollPage() {
+// Inner component that uses useSearchParams
+function CreatePollContent() {
   const { user, refreshUser } = useAuth();
   const { activeAccount, organizations } = useAccount();
   const router = useRouter();
@@ -104,7 +106,6 @@ export default function CreatePollPage() {
   const orgId = activeOrg?.id || null;
   const orgRole = activeOrg?.role || null;
 
-  // ✅ Fix: pass activeAccount as string | undefined
   const canCreate = canCreatePoll(user, activeAccount, orgId);
   const canScheduleOrgPoll = canSchedulePollInOrg(orgRole);
 
@@ -708,7 +709,6 @@ export default function CreatePollPage() {
                         selected ? 'border-primary bg-primary/8 dark:bg-primary/12' : 'border-gray-200 dark:border-white/10 bg-white dark:bg-white/3 hover:border-primary/40'
                       } ${allowed ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
                     >
-                      {/* ✅ Fix: ensure pt.value is a valid key of POLL_TYPE_ICONS */}
                       <div className="text-xl mb-1">{POLL_TYPE_ICONS[pt.value as PollTypeKey]}</div>
                       <div className={`text-[11px] font-bold ${selected ? 'text-primary' : 'text-gray-700 dark:text-gray-300'}`}>{pt.label}</div>
                       {!allowed && <div className="text-[9px] text-secondary font-semibold mt-1">Premium</div>}
@@ -813,7 +813,6 @@ export default function CreatePollPage() {
                           <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-1">Option image {type === 'comparison' ? '(required)' : '(optional)'}</p>
                           <div className="flex items-center gap-2 flex-wrap">
                             <MediaPicker key={optionImageKeys[opt.id] || 0} onPicked={(url) => {
-                              // Only set if url is a string (non-null)
                               if (typeof url === 'string') {
                                 setOptMedia(prev => ({ ...prev, [opt.id]: url }));
                               }
@@ -888,7 +887,7 @@ export default function CreatePollPage() {
         </div>
       </div>
 
-      {/* Modals – unchanged except for closing handlers */}
+      {/* Modals */}
       {showAIOptionsModal && (
         <Modal onClose={() => setShowAIOptionsModal(false)}>
           <h3 className="text-xl font-extrabold text-center mb-4 text-gray-900 dark:text-[#f0f0ff]">AI Poll Generation</h3>
@@ -1005,5 +1004,14 @@ export default function CreatePollPage() {
         .animate-fade-up{animation:fade-up 0.2s ease-out;}
       `}</style>
     </div>
+  );
+}
+
+// Default export with Suspense boundary
+export default function CreatePollPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <CreatePollContent />
+    </Suspense>
   );
 }

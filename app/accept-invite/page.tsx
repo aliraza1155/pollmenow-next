@@ -1,5 +1,7 @@
+// app/accept-invite/page.tsx
 'use client';
 
+import { Suspense } from 'react';
 import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -10,7 +12,7 @@ import { functions } from '@/lib/firebase';
 
 const acceptInvitationCall = httpsCallable(functions, 'acceptInvitation');
 
-export default function AcceptInvitePage() {
+function AcceptInviteContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
   const orgId = searchParams.get('orgId');
@@ -90,5 +92,13 @@ export default function AcceptInvitePage() {
         </button>
       </div>
     </div>
+  );
+}
+
+export default function AcceptInvitePage() {
+  return (
+    <Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center">Loading...</div>}>
+      <AcceptInviteContent />
+    </Suspense>
   );
 }

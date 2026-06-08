@@ -1,6 +1,7 @@
 // app/login/page.tsx
 'use client';
 
+import { Suspense } from 'react';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -87,7 +88,7 @@ function AuthLeft() {
   );
 }
 
-export default function Login() {
+function LoginContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const redirect = searchParams.get('redirect') || '/';
@@ -263,5 +264,13 @@ export default function Login() {
         </motion.div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }

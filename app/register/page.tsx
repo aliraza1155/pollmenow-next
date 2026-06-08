@@ -1,6 +1,7 @@
 // app/register/page.tsx
 'use client';
 
+import { Suspense } from 'react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -99,7 +100,7 @@ const CHECK_CONFIG = [
   { key: 'special', label: 'Special character' },
 ] as const;
 
-export default function Register() {
+function RegisterContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const prefilledEmail = searchParams.get('email') || '';
@@ -454,5 +455,13 @@ export default function Register() {
         </motion.div>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <RegisterContent />
+    </Suspense>
   );
 }

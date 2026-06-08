@@ -1,6 +1,7 @@
 // app/verify-email/page.tsx
 'use client';
 
+import { Suspense } from 'react';
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -10,7 +11,7 @@ import { sendEmailVerification, signOut } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
 import { Mail, CheckCircle, RefreshCw, ArrowLeft, ExternalLink } from 'lucide-react';
 
-export default function VerifyEmail() {
+function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const email = searchParams.get('email') || auth.currentUser?.email || '';
@@ -173,5 +174,13 @@ export default function VerifyEmail() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <VerifyEmailContent />
+    </Suspense>
   );
 }
