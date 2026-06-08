@@ -1,9 +1,10 @@
+// contexts/AccountContext.tsx
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { doc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db } from '@/lib/firebase';
 
 interface Organization {
   id: string;
@@ -103,7 +104,16 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       try {
         const orgDoc = await getDoc(doc(db, 'organizations', accountId));
         if (orgDoc.exists()) {
-          setActiveOrganization({ id: accountId, ...orgDoc.data() });
+          const orgData = orgDoc.data();
+          // Find the role from organizations state (or fallback)
+          const orgMembership = organizations.find(org => org.id === accountId);
+          const role = orgMembership?.role || 'member';
+          setActiveOrganization({
+            id: accountId,
+            name: orgData.name || 'Organization',
+            role: role,
+            ...orgData,
+          } as ActiveOrganization);
         } else {
           setActiveOrganization(null);
         }
@@ -125,17 +135,25 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       doc(db, 'organizations', activeAccount),
       (docSnap) => {
         if (docSnap.exists()) {
-          setActiveOrganization({ id: activeAccount, ...docSnap.data() });
+          const orgData = docSnap.data();
+          const orgMembership = organizations.find(org => org.id === activeAccount);
+          const role = orgMembership?.role || 'member';
+          setActiveOrganization({
+            id: activeAccount,
+            name: orgData.name || 'Organization',
+            role: role,
+            ...orgData,
+          } as ActiveOrganization);
           setOrganizations(prev =>
             prev.map(org =>
-              org.id === activeAccount ? { ...org, name: docSnap.data().name } : org
+              org.id === activeAccount ? { ...org, name: orgData.name } : org
             )
           );
         }
       }
     );
     return () => unsubscribe();
-  }, [activeAccount]);
+  }, [activeAccount, organizations]);
 
   const switchAccount = async (accountId: string) => {
     if (!user || accountId === activeAccount) return;

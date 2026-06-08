@@ -17,8 +17,8 @@ export const POLL_TYPES = [
   { label: 'Quick Poll', value: 'quick', minOptions: 2, maxOptions: 6, structure: 'standard', requiresMedia: false, description: 'Standard poll with multiple options', premium: false },
   { label: 'Yes/No', value: 'yesno', minOptions: 2, maxOptions: 2, structure: 'binary', requiresMedia: false, description: 'Simple yes/no binary question', premium: false },
   { label: 'Rating', value: 'rating', minOptions: 0, maxOptions: 0, structure: 'scale', requiresMedia: false, description: 'Rating scale from min to max', premium: false },
-  { label: 'Comparison', value: 'comparison', premium: true, minOptions: 2, maxOptions: 4, structure: 'comparative', requiresMedia: true, description: 'Compare options with media', premium: true },
-  { label: 'Live Event', value: 'live', premium: true, minOptions: 2, maxOptions: 6, structure: 'timed', requiresMedia: false, description: 'Live poll with urgency timer', premium: true }
+  { label: 'Comparison', value: 'comparison', minOptions: 2, maxOptions: 4, structure: 'comparative', requiresMedia: true, description: 'Compare options with media', premium: true },
+  { label: 'Live Event', value: 'live', minOptions: 2, maxOptions: 6, structure: 'timed', requiresMedia: false, description: 'Live poll with urgency timer', premium: true }
 ];
 
 export const VISIBILITY_OPTIONS = [

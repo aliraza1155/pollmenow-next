@@ -39,7 +39,8 @@ const cleanObject = (obj: any): any => {
   return out;
 };
 
-const POLL_TYPE_ICONS = { quick:'⚡', yesno:'✅', rating:'⭐', comparison:'⚖', live:'🔴' };
+const POLL_TYPE_ICONS = { quick:'⚡', yesno:'✅', rating:'⭐', comparison:'⚖', live:'🔴' } as const;
+type PollTypeKey = keyof typeof POLL_TYPE_ICONS;
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return <p className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-2.5">{children}</p>;
@@ -103,6 +104,7 @@ export default function CreatePollPage() {
   const orgId = activeOrg?.id || null;
   const orgRole = activeOrg?.role || null;
 
+  // ✅ Fix: pass activeAccount as string | undefined
   const canCreate = canCreatePoll(user, activeAccount, orgId);
   const canScheduleOrgPoll = canSchedulePollInOrg(orgRole);
 
@@ -706,7 +708,8 @@ export default function CreatePollPage() {
                         selected ? 'border-primary bg-primary/8 dark:bg-primary/12' : 'border-gray-200 dark:border-white/10 bg-white dark:bg-white/3 hover:border-primary/40'
                       } ${allowed ? 'cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
                     >
-                      <div className="text-xl mb-1">{POLL_TYPE_ICONS[pt.value]}</div>
+                      {/* ✅ Fix: ensure pt.value is a valid key of POLL_TYPE_ICONS */}
+                      <div className="text-xl mb-1">{POLL_TYPE_ICONS[pt.value as PollTypeKey]}</div>
                       <div className={`text-[11px] font-bold ${selected ? 'text-primary' : 'text-gray-700 dark:text-gray-300'}`}>{pt.label}</div>
                       {!allowed && <div className="text-[9px] text-secondary font-semibold mt-1">Premium</div>}
                     </button>
@@ -767,7 +770,7 @@ export default function CreatePollPage() {
                     {[{l:'Min',k:'min'},{l:'Max',k:'max'},{l:'Step',k:'step'}].map(f => (
                       <div key={f.k}>
                         <label className="block text-[11px] font-semibold text-gray-500 dark:text-gray-400 mb-1">{f.l}</label>
-                        <input type="number" className={inputCls} value={ratingScale[f.k]} onChange={e => setRatingScale(prev => ({ ...prev, [f.k]: Math.max(f.k === 'step' ? 0.1 : 1, parseFloat(e.target.value) || 1) }))} />
+                        <input type="number" className={inputCls} value={ratingScale[f.k as keyof typeof ratingScale]} onChange={e => setRatingScale(prev => ({ ...prev, [f.k]: Math.max(f.k === 'step' ? 0.1 : 1, parseFloat(e.target.value) || 1) }))} />
                       </div>
                     ))}
                   </div>
@@ -809,7 +812,12 @@ export default function CreatePollPage() {
                         <div className="mt-2 ml-7">
                           <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-1">Option image {type === 'comparison' ? '(required)' : '(optional)'}</p>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <MediaPicker key={optionImageKeys[opt.id] || 0} onPicked={url => setOptMedia(prev => ({ ...prev, [opt.id]: url }))} currentImage={optMedia[opt.id]} />
+                            <MediaPicker key={optionImageKeys[opt.id] || 0} onPicked={(url) => {
+                              // Only set if url is a string (non-null)
+                              if (typeof url === 'string') {
+                                setOptMedia(prev => ({ ...prev, [opt.id]: url }));
+                              }
+                            }} currentImage={optMedia[opt.id]} />
                             {canUseAI && <AiImageButton onGenerate={() => openPromptEditor({ type:'option', optionId:opt.id, optionText:opt.text, index:i, total:options.length })} loading={!!generatingImageForOptions[opt.id]} disabled={!opt.text.trim()} label="✨ AI" />}
                           </div>
                         </div>

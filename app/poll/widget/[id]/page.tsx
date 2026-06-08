@@ -1,7 +1,8 @@
-// app/poll/widget/[id]/page.tsx (or you can use a route group: (widget)/poll/[id]/page.tsx)
+// app/poll/widget/[id]/page.tsx
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -63,10 +64,11 @@ export default function PollWidget() {
     setSubmitting(true);
     setError('');
     try {
+      // ✅ Pass undefined instead of null for userId
       await submitVote(
         poll.id,
         selectedOption,
-        null,
+        undefined,
         true,
         undefined
       );
@@ -98,7 +100,6 @@ export default function PollWidget() {
   };
 
   const closeWidget = () => {
-    // In Next.js, window.close() may not work; we can redirect to homepage or just close via router.back()
     if (window.history.length > 1) {
       router.back();
     } else {

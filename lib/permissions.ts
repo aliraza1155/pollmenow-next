@@ -1,32 +1,33 @@
 // lib/permissions.ts
 // No 'use client' – pure functions, safe for server
 
-export function getRole(user: any, orgId: string) {
+export function getRole(user: any, orgId: string | null) {
   if (!orgId || !user?.memberships) return null;
   return user.memberships[orgId]?.role || null;
 }
 
-export function canManageTeam(user: any, orgId: string) {
+export function canManageTeam(user: any, orgId: string | null) {
   const role = getRole(user, orgId);
   return role === 'owner' || role === 'admin';
 }
 
-export function canDeleteOrganization(user: any, orgId: string) {
+export function canDeleteOrganization(user: any, orgId: string | null) {
   const role = getRole(user, orgId);
   return role === 'owner';
 }
 
-export function canEditOrgProfile(user: any, orgId: string) {
+export function canEditOrgProfile(user: any, orgId: string | null) {
   const role = getRole(user, orgId);
   return role === 'owner' || role === 'admin';
 }
 
-export function canManageOrgBilling(user: any, orgId: string) {
+export function canManageOrgBilling(user: any, orgId: string | null) {
   const role = getRole(user, orgId);
   return role === 'owner';
 }
 
-export function canCreatePoll(user: any, activeAccount: string, orgId: string | null) {
+// ✅ Fixed: accept string | null (like the original JS)
+export function canCreatePoll(user: any, activeAccount: string | null, orgId: string | null) {
   if (activeAccount === 'personal') return true;
   const role = getRole(user, orgId);
   return role === 'owner' || role === 'admin' || role === 'poll_manager';
@@ -59,7 +60,7 @@ export function canViewAnalytics(user: any, poll: any) {
   return false;
 }
 
-export function canViewOrgAnalytics(user: any, orgId: string) {
+export function canViewOrgAnalytics(user: any, orgId: string | null) {
   const role = getRole(user, orgId);
   return role === 'owner' || role === 'admin' || role === 'poll_manager' || role === 'analyst';
 }

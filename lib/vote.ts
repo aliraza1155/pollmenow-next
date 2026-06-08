@@ -79,10 +79,10 @@ export async function submitVote(
     let pollUpdate: any;
     if (pollData.type === 'rating') {
       const rating = parseInt(optionId);
-      const ratingCounts = { ...(pollData.ratingCounts || {}) };
+      const ratingCounts: Record<string, number> = { ...(pollData.ratingCounts || {}) };
       ratingCounts[rating] = (ratingCounts[rating] || 0) + 1;
-      const totalRatings = Object.values(ratingCounts).reduce((a: number, b: number) => a + b, 0);
-      const sumRatings = Object.entries(ratingCounts).reduce((s: number, [r, c]) => s + parseInt(r) * (c as number), 0);
+      const totalRatings = Object.values(ratingCounts).reduce((a, b) => a + b, 0);
+      const sumRatings = Object.entries(ratingCounts).reduce((s, [r, c]) => s + parseInt(r) * c, 0);
       pollUpdate = {
         ratingCounts,
         averageRating: totalRatings > 0 ? sumRatings / totalRatings : 0,
@@ -127,6 +127,7 @@ export async function submitVote(
 
       if (!pollData.anonymous && !userId) throw new Error('Login required to vote in this poll');
 
+      // Targeting checks – userId is guaranteed to be defined after the above check
       if (pollData.meta?.targetDemographics) {
         const target = pollData.meta.targetDemographics;
         if (!userId) throw new Error('This poll is targeted to a specific audience. Please log in to vote.');
@@ -187,12 +188,14 @@ export async function submitVote(
           }
         }
       } else {
-        voteData.userId = userId;
-        const userDoc = await transaction.get(doc(db, 'users', userId));
+        // userId must be defined here because we're in non-anonymous path and we have the earlier check
+        const currentUserId = userId!;
+        voteData.userId = currentUserId;
+        const userDoc = await transaction.get(doc(db, 'users', currentUserId));
         if (userDoc.exists()) {
           const ud = userDoc.data();
           voteData.user = {
-            id: userId,
+            id: currentUserId,
             name: ud.name || 'Anonymous',
             profileImage: ud.profileImage || null,
             username: ud.username,
@@ -208,10 +211,10 @@ export async function submitVote(
 
       if (pollData.type === 'rating') {
         const rating = parseInt(optionId);
-        const ratingCounts = pollData.ratingCounts || {};
+        const ratingCounts: Record<string, number> = pollData.ratingCounts || {};
         ratingCounts[rating] = (ratingCounts[rating] || 0) + 1;
-        const totalRatings = Object.values(ratingCounts).reduce((a: number, b: number) => a + b, 0);
-        const sumRatings = Object.entries(ratingCounts).reduce((s: number, [r, c]) => s + parseInt(r) * (c as number), 0);
+        const totalRatings = Object.values(ratingCounts).reduce((a, b) => a + b, 0);
+        const sumRatings = Object.entries(ratingCounts).reduce((s, [r, c]) => s + parseInt(r) * c, 0);
         transaction.update(pollRef, {
           ratingCounts,
           averageRating: totalRatings > 0 ? sumRatings / totalRatings : 0,

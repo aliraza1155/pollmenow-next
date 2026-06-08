@@ -1,7 +1,8 @@
+// contexts/AuthContext.tsx
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { auth, db } from '../lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -68,14 +69,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         const data = userDoc.data()!;
         const activeAccount = data.type === 'organization' ? firebaseUser.uid : (data.activeAccount || 'personal');
-        setUser({
+        const userData: UserData = {
           uid: firebaseUser.uid,
-          ...data,
-          memberships: data.memberships || {},
-          activeAccount,
+          name: data.name || '',
+          email: data.email || '',
+          username: data.username || '',
+          type: data.type || 'individual',
+          tier: data.tier || 'free',
+          verified: data.verified || false,
           createdAt: data.createdAt?.toDate?.() || new Date(),
           updatedAt: data.updatedAt?.toDate?.() || new Date(),
-        });
+          followersCount: data.followersCount || 0,
+          followingCount: data.followingCount || 0,
+          pollsCreated: data.pollsCreated || 0,
+          pollsThisMonth: data.pollsThisMonth || 0,
+          phone: data.phone || null,
+          location: data.location || { country: null, city: null },
+          memberships: data.memberships || {},
+          activeAccount,
+          // Spread any additional fields from data (optional)
+          ...data,
+        };
+        setUser(userData);
       } else {
         setUser(null);
       }
@@ -90,12 +105,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (userDoc.exists()) {
         const data = userDoc.data()!;
         const activeAccount = data.type === 'organization' ? auth.currentUser.uid : (data.activeAccount || 'personal');
-        setUser({
+        const userData: UserData = {
           uid: auth.currentUser.uid,
-          ...data,
+          name: data.name || '',
+          email: data.email || '',
+          username: data.username || '',
+          type: data.type || 'individual',
+          tier: data.tier || 'free',
+          verified: data.verified || false,
+          createdAt: data.createdAt?.toDate?.() || new Date(),
+          updatedAt: data.updatedAt?.toDate?.() || new Date(),
+          followersCount: data.followersCount || 0,
+          followingCount: data.followingCount || 0,
+          pollsCreated: data.pollsCreated || 0,
+          pollsThisMonth: data.pollsThisMonth || 0,
+          phone: data.phone || null,
+          location: data.location || { country: null, city: null },
           memberships: data.memberships || {},
           activeAccount,
-        });
+          ...data,
+        };
+        setUser(userData);
       }
     }
   };

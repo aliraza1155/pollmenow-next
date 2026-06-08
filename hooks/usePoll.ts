@@ -1,9 +1,10 @@
+// hooks/usePoll.ts
 'use client';
 
 import { useEffect, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import { convertOptionsToArray, toDate } from '../lib/utils';
+import { db } from '@/lib/firebase';
+import { convertOptionsToArray, toDate } from '@/lib/utils';
 
 interface PollData {
   id: string;
@@ -42,14 +43,18 @@ export function usePoll(pollId: string | undefined) {
             profileImage: creator.profileImage,
             tier: creator.tier || 'free',
           };
-          setPoll({
+          const pollData: PollData = {
             id: docSnap.id,
+            question: data.question || '',
+            type: data.type || 'quick',
+            totalVotes: data.totalVotes || 0,
             ...data,
             creator: safeCreator,
             options: convertOptionsToArray(data.options),
             createdAt: toDate(data.createdAt),
             endsAt: toDate(data.endsAt),
-          });
+          };
+          setPoll(pollData);
         } else {
           setError('Poll not found');
         }

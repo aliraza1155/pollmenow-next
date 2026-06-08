@@ -136,10 +136,9 @@ export default function PollAnalyticsPage() {
     { name:'Other', value: genderCounts.other || 0 },
   ];
   const ageBucketsObj = analytics.ageBuckets || {};
-  const ageData = Object.entries(ageBucketsObj).map(([k,v]) => ({ age:k, count:v }));
-  const countryData = analytics.countryCounts
-    ? Object.entries(analytics.countryCounts).sort((a,b)=>b[1]-a[1]).slice(0,10)
-    : [];
+  const ageData = Object.entries(ageBucketsObj).map(([k,v]) => ({ age:k, count:v as number }));
+  const countryEntries = Object.entries(analytics.countryCounts || {}) as [string, number][];
+  const countryData = countryEntries.sort((a,b)=>b[1]-a[1]).slice(0,10);
 
   const optionDemographics = analytics.optionDemographics || {};
   const optionResults = (poll.options || []).map((opt: any) => {
@@ -152,8 +151,9 @@ export default function PollAnalyticsPage() {
   const maxVotes = Math.max(...optionResults.map((o: any) => o.votes), 1);
 
   const isCreator = poll?.creator?.id === user?.uid;
-  const canViewAdvanced = isCreator || hasPremiumAnalytics(user?.tier) || canViewAdvancedAnalytics(userRole);
-  const isPremium = hasPremiumAnalytics(user?.tier);
+  // ✅ Fix: provide fallback 'free' for user?.tier
+  const canViewAdvanced = isCreator || hasPremiumAnalytics(user?.tier || 'free') || canViewAdvancedAnalytics(userRole);
+  const isPremium = hasPremiumAnalytics(user?.tier || 'free');
 
   let ageBucketsList: string[] = [], optionsLabels: string[] = [], heatmapData: any = {}, genderOptionData: any[] = [], topCountryPerOption: any[] = [];
   if (canViewAdvanced && poll.options) {
@@ -176,7 +176,8 @@ export default function PollAnalyticsPage() {
     }));
     topCountryPerOption = poll.options.map((opt: any) => {
       const countries = optionDemographics[opt.id]?.countryCounts || {};
-      const top = Object.entries(countries).sort((a,b)=>b[1]-a[1])[0];
+      const entries = Object.entries(countries) as [string, number][];
+      const top = entries.sort((a,b)=>b[1]-a[1])[0];
       return { option: opt.text, countryCode: top?.[0], percent: top?.[1] };
     });
   }
@@ -190,7 +191,9 @@ export default function PollAnalyticsPage() {
         import('file-saver'),
       ]);
       const canvas = await html2canvas(containerRef.current);
-      canvas.toBlob(blob => saveAs(blob, `poll-${id}-analytics.png`));
+      canvas.toBlob(blob => {
+        if (blob) saveAs(blob, `poll-${id}-analytics.png`);
+      });
     } finally {
       setExporting(e => ({ ...e, png: false }));
     }
@@ -325,7 +328,7 @@ export default function PollAnalyticsPage() {
           </div>
           <h2 className="text-lg font-bold mt-3 break-words opacity-95">{poll.question}</h2>
           <div className="flex flex-wrap gap-3 mt-2 text-sm opacity-80">
-            <span>{poll.meta?.isLive ? '🔴 LIVE' : (poll.endsAt && new Date() > toDate(poll.endsAt) ? '⏰ EXPIRED' : '🟢 ACTIVE')}</span>
+            <span>{poll.meta?.isLive ? '🔴 LIVE' : (poll.endsAt && new Date() > toDate(poll.endsAt)! ? '⏰ EXPIRED' : '🟢 ACTIVE')}</span>
             <span>Created: {formatDate(poll.createdAt)}</span>
             {poll.endsAt && <span>Ends: {formatDate(poll.endsAt)}</span>}
           </div>
@@ -444,7 +447,7 @@ export default function PollAnalyticsPage() {
                 <div>
                   <h3 className={labelCls}>Top Countries</h3>
                   <ResponsiveContainer width="100%" height={Math.max(200, countryData.length * 32)}>
-                    <BarChart data={countryData.map(([code,count]: [string, number]) => ({ code, count }))} layout="vertical">
+                    <BarChart data={countryData.map(([code, count]) => ({ code, count }))} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                       <XAxis type="number" tick={{ fill: axisColor, fontSize:11 }} />
                       <YAxis type="category" dataKey="code" width={80} tick={{ fill: axisColor, fontSize:11 }} />
@@ -467,10 +470,13 @@ export default function PollAnalyticsPage() {
                                     + (optionDemographics[opt.id]?.genderCounts?.other || 0);
                       const pct = totalVotes ? ((totalOpt / totalVotes) * 100).toFixed(1) : 0;
                       const ageBuck = optionDemographics[opt.id]?.ageBuckets || {};
-                      const dominantAge = Object.entries(ageBuck).sort((a,b)=>b[1]-a[1])[0]?.[0] || '—';
+                      const ageEntries = Object.entries(ageBuck) as [string, number][];
+                      const dominantAge = ageEntries.sort((a,b)=>b[1]-a[1])[0]?.[0] || '—';
                       const gender = optionDemographics[opt.id]?.genderCounts || {};
-                      const dominantGender = Object.entries(gender).sort((a,b)=>b[1]-a[1])[0]?.[0] || '—';
-                      const country = Object.entries(optionDemographics[opt.id]?.countryCounts || {}).sort((a,b)=>b[1]-a[1])[0]?.[0] || '—';
+                      const genderEntries = Object.entries(gender) as [string, number][];
+                      const dominantGender = genderEntries.sort((a,b)=>b[1]-a[1])[0]?.[0] || '—';
+                      const countryEntries = Object.entries(optionDemographics[opt.id]?.countryCounts || {}) as [string, number][];
+                      const country = countryEntries.sort((a,b)=>b[1]-a[1])[0]?.[0] || '—';
                       return (
                         <div key={opt.id} className="bg-gray-50 dark:bg-[#161829] rounded-xl p-4 border border-gray-100 dark:border-white/8">
                           <p className="font-bold text-gray-800 dark:text-gray-100">{opt.text}</p>

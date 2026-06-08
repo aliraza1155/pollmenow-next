@@ -130,7 +130,7 @@ export default function TeamManagementPage() {
     if (members.some(m => m.email === inviteEmail)) { showToast('User is already a team member', 'error'); return; }
     setInviting(true);
     try {
-      await createInvitationCall({ email: inviteEmail, role: inviteRole, orgId });
+      await createInvitationCall({ email: inviteEmail, role: inviteRole, orgId: orgId! });
       showToast(`Invitation sent to ${inviteEmail}`, 'success');
       setInviteEmail('');
     } catch (err: any) {
@@ -140,6 +140,7 @@ export default function TeamManagementPage() {
 
   const handleRemove = async (member: any) => {
     if (!canEdit) { showToast('Only admins can remove members', 'error'); return; }
+    if (!orgId) { showToast('Organization not found', 'error'); return; }
     if (member.role === 'owner') { showToast('Cannot remove the organization owner', 'error'); return; }
     if (!window.confirm(`Remove ${member.name} from your team?`)) return;
     setRemovingId(member.id);
@@ -153,6 +154,7 @@ export default function TeamManagementPage() {
 
   const handleRoleChange = async (memberId: string, newRole: string) => {
     if (!canEdit) { showToast('Only admins can change roles', 'error'); return; }
+    if (!orgId) { showToast('Organization not found', 'error'); return; }
     setChangingRoleId(memberId);
     try {
       await updateDoc(doc(db, 'organizations', orgId, 'team', memberId), { role: newRole });

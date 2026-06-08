@@ -97,7 +97,8 @@ export default function ProfilePage() {
           : query(collection(db, 'polls'), where('creator.id', '==', targetUserId));
         const unsub = onSnapshot(pollsQ, snap => {
           const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: doc.data().createdAt ? toDate(doc.data().createdAt) : new Date() }));
-          data.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+          // Sort by createdAt timestamp (convert Date to number)
+          data.sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
           setPolls(data);
         });
         pollsUnsubRef.current = unsub;
@@ -127,7 +128,7 @@ export default function ProfilePage() {
     setUploading(true);
     try {
       const url = await uploadToFirebaseStorage(file, `profiles/${targetUserId}`);
-      await updateDoc(doc(db, 'users', targetUserId), { profileImage: url, updatedAt: serverTimestamp() });
+      await updateDoc(doc(db, 'users', targetUserId!), { profileImage: url, updatedAt: serverTimestamp() });
       setProfile((p: any) => ({ ...p, profileImage: url }));
       await refreshUser();
       showToast('success', 'Photo updated!');
@@ -200,7 +201,8 @@ export default function ProfilePage() {
   const monthlyLimit = getMonthlyPollLimit(profile?.tier || 'free');
   const usagePct = monthlyLimit === Infinity ? 10 : Math.min(100, ((profile?.pollsThisMonth || 0) / monthlyLimit) * 100);
   const earnedBadges = (profile?.badges || []).map((bid: string) => BADGES.find(b => b.id === bid)).filter(Boolean);
-  const showTeamTab = showOrganizationProfile && user && user.memberships?.[activeAccount] != null;
+  // Fix: ensure activeAccount is not null before indexing memberships
+  const showTeamTab = showOrganizationProfile && user && activeAccount && user.memberships?.[activeAccount] != null;
   const tabs = ['polls', ...(profile?.type !== 'organization' ? ['achievements', 'about'] : ['about']), ...(showTeamTab ? ['team'] : [])];
 
   if (loading) return (

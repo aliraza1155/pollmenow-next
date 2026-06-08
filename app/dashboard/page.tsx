@@ -90,17 +90,20 @@ export default function DashboardPage() {
     } else { setOrgInfo(null); }
   }, [activeAccount]);
 
-  const activeOrg = activeAccount !== 'personal' ? organizations.find(o => o.id === activeAccount) : null;
-  const canCreate = canCreatePoll(user, activeAccount, activeAccount !== 'personal' ? activeAccount : null);
-  const currentOrgRole = activeAccount !== 'personal' ? user?.memberships?.[activeAccount]?.role : null;
-  const canViewAdvanced = canViewAdvancedAnalytics(currentOrgRole) && hasPremiumAnalytics(user?.tier);
+  // ✅ Remove unused activeOrg variable
+  // const activeOrg = activeAccount && activeAccount !== 'personal' ? organizations.find(o => o.id === activeAccount) : null;
+
+  // ✅ Simplified: canCreatePoll now accepts string | null
+  const canCreate = canCreatePoll(user, activeAccount, activeAccount && activeAccount !== 'personal' ? activeAccount : null);
+  const currentOrgRole = activeAccount && activeAccount !== 'personal' ? user?.memberships?.[activeAccount]?.role : null;
+  const canViewAdvanced = canViewAdvancedAnalytics(currentOrgRole) && hasPremiumAnalytics(user?.tier || 'free');
 
   useEffect(() => {
     if (!user) return;
     setLoading(true);
     const pollsQ = activeAccount === 'personal'
       ? query(collection(db, 'polls'), where('creator.id', '==', user.uid))
-      : query(collection(db, 'polls'), where('context.type', '==', 'organization'), where('context.orgId', '==', activeAccount));
+      : activeAccount ? query(collection(db, 'polls'), where('context.type', '==', 'organization'), where('context.orgId', '==', activeAccount)) : query(collection(db, 'polls'), where('creator.id', '==', user.uid));
 
     const unsub = onSnapshot(pollsQ, snap => {
       setMyPolls(snap.docs.map(d => ({
@@ -133,14 +136,14 @@ export default function DashboardPage() {
         const snap = await getDocs(
           activeAccount === 'personal'
             ? query(collection(db, 'polls'), where('creator.id', '==', user.uid))
-            : query(collection(db, 'polls'), where('context.type', '==', 'organization'), where('context.orgId', '==', activeAccount))
+            : activeAccount ? query(collection(db, 'polls'), where('context.type', '==', 'organization'), where('context.orgId', '==', activeAccount)) : query(collection(db, 'polls'), where('creator.id', '==', user.uid))
         );
         const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         setAllPolls(list);
         const map: Record<string, any> = {};
         let tv = 0, tvw = 0, ts = 0;
         for (const poll of list) {
-          const a = await getPollAnalytics(poll.id, user.tier, user.uid);
+          const a = await getPollAnalytics(poll.id, user.tier || 'free', user.uid);
           if (a) { map[poll.id] = a; tv += a.totalVotes || 0; tvw += a.totalViews || 0; ts += a.shares || 0; }
         }
         setPollsAnalytics(map);
@@ -149,7 +152,12 @@ export default function DashboardPage() {
           const daily: Record<string, number> = {};
           for (const p of list) {
             const a = map[p.id];
-            if (a?.votesByDay) for (const [day, v] of Object.entries(a.votesByDay)) daily[day] = (daily[day] || 0) + v;
+            if (a?.votesByDay) {
+              for (const [day, v] of Object.entries(a.votesByDay)) {
+                const voteCount = typeof v === 'number' ? v : Number(v);
+                daily[day] = (daily[day] || 0) + voteCount;
+              }
+            }
           }
           setTrendData(Object.entries(daily).sort((a, b) => a[0].localeCompare(b[0])).slice(-14).map(([day, votes]) => ({ day: day.slice(5), votes })));
         }
@@ -184,7 +192,7 @@ export default function DashboardPage() {
   );
 
   const totalVotesReceived = myPolls.reduce((sum, p) => sum + (p.totalVotes || 0), 0);
-  const limit = getMonthlyPollLimit(user.tier);
+  const limit = getMonthlyPollLimit(user.tier || 'free');
   const used = user.pollsThisMonth || 0;
   const left = activeAccount !== 'personal' ? '∞' : (limit === Infinity ? Infinity : Math.max(0, limit - used));
   const usagePct = (activeAccount !== 'personal' || limit === Infinity) ? 10 : Math.min(100, (used / limit) * 100);
@@ -405,12 +413,21 @@ export default function DashboardPage() {
                   <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
                       <thead className="bg-gray-50 dark:bg-[#161829]">
-                        <tr><th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Poll</th><th>Rate</th><th>Votes</th><th>Views</th><th></th></tr>
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Poll</th>
+                          <th>Rate</th>
+                          <th>Votes</th>
+                          <th>Views</th>
+                          <th></th>
+                        </tr>
                       </thead>
                       <tbody>
-                        {loadingAnalytics ? <tr><td colSpan={5} className="text-center py-8 text-gray-400 dark:text-gray-500">Loading analytics…</td></tr>
-                        : filteredAnalyticsPolls.length === 0 ? <tr><td colSpan={5} className="text-center py-8 text-gray-400 dark:text-gray-500">No polls found</td></tr>
-                        : filteredAnalyticsPolls.map(poll => {
+                        {loadingAnalytics ? (
+                          <tr><td colSpan={5} className="text-center py-8 text-gray-400 dark:text-gray-500">Loading analytics…</td></tr>
+                        ) : filteredAnalyticsPolls.length === 0 ? (
+                          <tr><td colSpan={5} className="text-center py-8 text-gray-400 dark:text-gray-500">No polls found</td></tr>
+                        ) : (
+                          filteredAnalyticsPolls.map(poll => {
                             const a = pollsAnalytics[poll.id];
                             const voteRate = a?.totalViews ? ((a.totalVotes / a.totalViews) * 100).toFixed(1) : 0;
                             return (
@@ -419,10 +436,15 @@ export default function DashboardPage() {
                                 <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{voteRate}%</td>
                                 <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{a?.totalVotes || 0}</td>
                                 <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{a?.totalViews || 0}</td>
-                                <td className="px-4 py-3"><Link href={`/poll/analytics/${poll.id}`} className="text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-500/10 px-2.5 py-1 rounded-lg text-xs font-bold hover:bg-purple-100 dark:hover:bg-purple-500/20 transition whitespace-nowrap">View</Link></td>
+                                <td className="px-4 py-3">
+                                  <Link href={`/poll/analytics/${poll.id}`} className="text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-500/10 px-2.5 py-1 rounded-lg text-xs font-bold hover:bg-purple-100 dark:hover:bg-purple-500/20 transition whitespace-nowrap">
+                                    View
+                                  </Link>
+                                </td>
                               </tr>
                             );
-                          })}
+                          })
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -435,7 +457,7 @@ export default function DashboardPage() {
                   </div>
                 )}
 
-                {!hasPremiumAnalytics(user?.tier) && (
+                {!hasPremiumAnalytics(user?.tier || 'free') && (
                   <div className="bg-gradient-to-br from-purple-50 dark:from-purple-500/10 to-indigo-50 dark:to-indigo-500/10 border border-purple-100 dark:border-purple-500/20 rounded-2xl p-5 text-center">
                     <TrendingUp size={28} className="text-purple-400 mx-auto mb-2" />
                     <p className="font-bold text-gray-800 dark:text-[#f0f0ff] mb-1">Advanced Analytics</p>

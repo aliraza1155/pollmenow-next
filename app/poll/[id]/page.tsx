@@ -138,7 +138,8 @@ export default function PollPage() {
 
   useEffect(() => {
     if (!poll) return;
-    if (canViewAnalytics(user, poll) || hasPremiumAnalytics(user?.tier)) {
+    // ✅ Fix: provide fallback 'free' for user?.tier
+    if (canViewAnalytics(user, poll) || hasPremiumAnalytics(user?.tier || 'free')) {
       getPollAnalytics(poll.id, user?.tier || 'free', user?.uid)
         .then(setAnalytics)
         .catch(() => {});
@@ -151,6 +152,7 @@ export default function PollPage() {
   };
 
   const performVote = async (optionId: string, demographics: any = null) => {
+    if (!poll) return; // safety guard
     setVoting(true);
     try {
       const isAnonymous = user ? (voteAnonymously && poll.visibility !== 'private') : true;
@@ -187,6 +189,7 @@ export default function PollPage() {
   };
 
   const handleVote = () => {
+    if (!poll) return;
     if (!selectedOption) {
       notify('error', 'Please select an option first.');
       return;
@@ -239,7 +242,7 @@ export default function PollPage() {
       setShowAuthModal(true);
       return;
     }
-    if (isCreator) return;
+    if (!poll || isCreator) return;
     setFollowingLoading(true);
     try {
       if (isFollowingCreator) {
@@ -298,6 +301,7 @@ export default function PollPage() {
     );
   }
 
+  // From this point onward, poll is guaranteed to exist
   const totalVotes = poll.totalVotes || 0;
   const isExpired = poll.endsAt && new Date(poll.endsAt) < new Date();
   const canVote = !hasVoted && !isExpired;
@@ -748,7 +752,7 @@ export default function PollPage() {
                   </div>
                 </div>
               </div>
-            ) : !hasPremiumAnalytics(user?.tier) && !canViewAnalytics(user, poll) ? (
+            ) : !hasPremiumAnalytics(user?.tier || 'free') && !canViewAnalytics(user, poll) ? (
               <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-primary/20 rounded-xl p-4 text-center">
                 <span className="text-2xl">📊</span>
                 <p className="text-sm font-extrabold text-indigo-800 mt-2 mb-1">Advanced Analytics</p>

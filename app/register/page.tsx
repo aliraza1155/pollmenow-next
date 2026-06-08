@@ -90,13 +90,14 @@ function AuthLeft() {
   );
 }
 
+// Use `as const` to make the `key` property a literal union type
 const CHECK_CONFIG = [
-  { key:'length',  label:'8+ characters'  },
-  { key:'upper',   label:'Uppercase letter' },
-  { key:'lower',   label:'Lowercase letter' },
-  { key:'number',  label:'Number'           },
-  { key:'special', label:'Special character'},
-];
+  { key: 'length', label: '8+ characters' },
+  { key: 'upper', label: 'Uppercase letter' },
+  { key: 'lower', label: 'Lowercase letter' },
+  { key: 'number', label: 'Number' },
+  { key: 'special', label: 'Special character' },
+] as const;
 
 export default function Register() {
   const router = useRouter();
@@ -124,16 +125,20 @@ export default function Register() {
   const [detectedLocation,  setDetectedLocation]  = useState<any>(null);
 
   const [passwordChecks, setPasswordChecks] = useState({
-    length:false, upper:false, lower:false, number:false, special:false,
+    length: false,
+    upper: false,
+    lower: false,
+    number: false,
+    special: false,
   });
   const [pwFocused, setPwFocused] = useState(false);
 
   useEffect(() => {
     setPasswordChecks({
-      length:  password.length >= 8,
-      upper:   /[A-Z]/.test(password),
-      lower:   /[a-z]/.test(password),
-      number:  /[0-9]/.test(password),
+      length: password.length >= 8,
+      upper: /[A-Z]/.test(password),
+      lower: /[a-z]/.test(password),
+      number: /[0-9]/.test(password),
       special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
     });
   }, [password]);
@@ -351,7 +356,7 @@ export default function Register() {
               {(pwFocused || password.length > 0) && (
                 <div className="mt-2 grid grid-cols-2 gap-1">
                   {CHECK_CONFIG.map(c => (
-                    <div key={c.key} className={`flex items-center gap-1.5 text-xs font-medium ${passwordChecks[c.key]?'text-emerald-600 dark:text-emerald-400':'text-gray-400 dark:text-gray-500'}`}>
+                    <div key={c.key} className={`flex items-center gap-1.5 text-xs font-medium ${passwordChecks[c.key] ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}`}>
                       {passwordChecks[c.key]
                         ? <Check size={12} className="flex-shrink-0" />
                         : <div className="w-3 h-3 rounded-full border border-current flex-shrink-0" />

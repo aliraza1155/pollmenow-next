@@ -40,9 +40,10 @@ export function showBrowserNotification(title: string, body: string, options: { 
     data: options.data || {},
   });
   if (options.url) {
+    const url = options.url;
     notification.onclick = () => {
       window.focus();
-      window.location.href = options.url;
+      window.location.href = url;
     };
   }
 }

@@ -46,5 +46,14 @@ export async function getBrowserLocation(): Promise<{ country: string | undefine
 export async function detectLocation(): Promise<{ country: string | undefined; city: string | undefined; lat?: number; lng?: number } | null> {
   const gps = await getBrowserLocation();
   if (gps && gps.country) return gps;
-  return await getCountryFromIP();
+  
+  const ip = await getCountryFromIP();
+  if (ip) {
+    // Convert IP result to match the GPS shape (no lat/lng)
+    return {
+      country: ip.country,
+      city: ip.city ?? undefined,
+    };
+  }
+  return null;
 }

@@ -1,3 +1,4 @@
+// components/NotificationSettings.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -61,7 +62,8 @@ export default function NotificationSettings() {
     setSettings(newSettings);
     setSaving(key);
     try {
-      await updateUserNotificationSettings(user.uid, newSettings);
+      // user is guaranteed to exist because toggleSetting is only called after user check
+      await updateUserNotificationSettings(user!.uid, newSettings);
     } catch {
       setSettings(settings);
     } finally { setSaving(null); }

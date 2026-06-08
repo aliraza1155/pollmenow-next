@@ -109,7 +109,7 @@ export default function UpgradePage() {
     setSelectedPlan(plan);
     setLoading(true);
     try {
-      const result = await callFunction('createPaymentIntent', { amount: plan.price, currency: 'usd', metadata: { planId: plan.id, userId: user.uid } });
+      const result = await callFunction('createPaymentIntent', { amount: plan.price, currency: 'usd', metadata: { planId: plan.id, userId: user.uid } }) as { clientSecret: string };
       setClientSecret(result.clientSecret);
     } catch { showToast('error', 'Failed to initialize payment.'); }
     finally { setLoading(false); }
