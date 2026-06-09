@@ -67,7 +67,7 @@ function Toggle({ value, onChange, disabled = false, disabledReason = '' }: { va
   );
 }
 
-function AiImageButton({ onGenerate, loading, disabled, label = '✨ AI' }: { onGenerate: () => void; loading: boolean; disabled: boolean; label?: string }) {
+function AiImageButton({ onGenerate, loading, disabled, label = '🤖 AI' }: { onGenerate: () => void; loading: boolean; disabled: boolean; label?: string }) {
   return (
     <button
       type="button"
@@ -77,7 +77,7 @@ function AiImageButton({ onGenerate, loading, disabled, label = '✨ AI' }: { on
         loading || disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:opacity-90'
       }`}
     >
-      {loading ? '⏳' : '✨'} {label}
+      {loading ? '⏳' : '🤖'} {label}
     </button>
   );
 }
@@ -95,7 +95,7 @@ function Modal({ children, onClose }: { children: React.ReactNode; onClose: () =
 // Inner component that uses useSearchParams
 function CreatePollContent() {
   const { user, refreshUser } = useAuth();
-  const { activeAccount, organizations } = useAccount();
+  const { activeAccount, organizations, loading: accountLoading } = useAccount();
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get('edit');
@@ -175,6 +175,16 @@ function CreatePollContent() {
   const showToastMessage = (type: string, msg: string) => { setToast({ type, msg }); setTimeout(() => setToast(null), 3500); };
   const getAllOptionTexts = () => options.map(o => o.text).filter(t => t.trim());
 
+  // --- Wait for account data before evaluating permissions ---
+  useEffect(() => {
+    if (accountLoading) return;
+    if (!isEditing && !isPersonal && !canCreate) {
+      setPermissionError(true);
+    } else {
+      setPermissionError(false);
+    }
+  }, [isPersonal, canCreate, isEditing, accountLoading]);
+
   useEffect(() => {
     if (!isPersonal && orgId) {
       getDoc(doc(db, 'users', orgId)).then(snap => {
@@ -195,10 +205,6 @@ function CreatePollContent() {
       showToastMessage('info', 'Anonymous voting disabled because audience targeting is enabled.');
     }
   }, [targeting.enabled, anonymous]);
-  useEffect(() => {
-    if (!isEditing && !isPersonal && !canCreate) setPermissionError(true);
-    else setPermissionError(false);
-  }, [isPersonal, canCreate, isEditing]);
   useEffect(() => {
     setIsComparison(type === 'comparison');
     if (type === 'comparison') setMediaChoice('options');
@@ -627,6 +633,15 @@ function CreatePollContent() {
     </>
   );
 
+  // Show loading while account data is being fetched
+  if (accountLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-[#08091a]">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
   if (!user) return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4 bg-gray-50 dark:bg-[#08091a]">
       <p className="text-lg font-bold text-gray-900 dark:text-[#f0f0ff]">Sign in to create polls</p>
@@ -674,14 +689,14 @@ function CreatePollContent() {
           <div className="flex-1">
             {/* AI Generator */}
             <FormCard>
-              <SectionTitle>✦ AI Generate (Optional)</SectionTitle>
+              <SectionTitle>🤖 AI Generate (Optional)</SectionTitle>
               <div className="flex flex-wrap gap-2 mb-2">
                 <input className={`flex-1 ${inputCls}`} placeholder="e.g. remote work trends 2026…" value={aiTopic} onChange={e => setAiTopic(e.target.value)} onKeyDown={e => e.key === 'Enter' && openAIOptionsModal()} />
                 <button onClick={openAIOptionsModal} disabled={aiLoading.poll} className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap flex items-center gap-1.5 transition ${aiLoading.poll ? 'bg-gray-200 dark:bg-white/8 text-gray-500 dark:text-gray-400' : 'bg-gradient-to-r from-primary to-secondary text-white shadow-sm hover:shadow hover:opacity-90'}`}>
-                  {aiLoading.poll ? <><div className="w-3.5 h-3.5 border-2 border-gray-500 dark:border-gray-400 border-t-transparent rounded-full animate-spin" />Generating</> : '✦ Generate'}
+                  {aiLoading.poll ? <><div className="w-3.5 h-3.5 border-2 border-gray-500 dark:border-gray-400 border-t-transparent rounded-full animate-spin" />Generating</> : '🤖 Generate'}
                 </button>
                 <button onClick={openUrlInputModal} disabled={aiLoading.poll} className={`px-4 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition ${aiLoading.poll ? 'bg-gray-200 dark:bg-white/8 text-gray-500 dark:text-gray-400' : 'bg-gradient-to-r from-primary to-secondary text-white shadow-sm hover:shadow hover:opacity-90'}`}>
-                  🌐 From URL
+                  🔗 From URL
                 </button>
               </div>
               <div className="flex items-center gap-2 mt-2">
@@ -817,7 +832,7 @@ function CreatePollContent() {
                                 setOptMedia(prev => ({ ...prev, [opt.id]: url }));
                               }
                             }} currentImage={optMedia[opt.id]} />
-                            {canUseAI && <AiImageButton onGenerate={() => openPromptEditor({ type:'option', optionId:opt.id, optionText:opt.text, index:i, total:options.length })} loading={!!generatingImageForOptions[opt.id]} disabled={!opt.text.trim()} label="✨ AI" />}
+                            {canUseAI && <AiImageButton onGenerate={() => openPromptEditor({ type:'option', optionId:opt.id, optionText:opt.text, index:i, total:options.length })} loading={!!generatingImageForOptions[opt.id]} disabled={!opt.text.trim()} label="Generate with AI" />}
                           </div>
                         </div>
                       )}
@@ -843,7 +858,7 @@ function CreatePollContent() {
             {/* Scheduling */}
             {effectiveTier === 'premium' && !isEditing && (isPersonal || canScheduleOrgPoll) && (
               <FormCard>
-                <SectionTitle>⏱️ Scheduling</SectionTitle>
+                <SectionTitle>📅 Scheduling</SectionTitle>
                 <div className="flex items-center justify-between mb-3">
                   <div><p className="text-sm font-semibold text-gray-800 dark:text-gray-200 m-0">Schedule for later</p><p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">Auto-publish at specified time</p></div>
                   <Toggle value={scheduleEnabled} onChange={setScheduleEnabled} />
@@ -887,7 +902,7 @@ function CreatePollContent() {
         </div>
       </div>
 
-      {/* Modals */}
+      {/* Modals – unchanged except for label text */}
       {showAIOptionsModal && (
         <Modal onClose={() => setShowAIOptionsModal(false)}>
           <h3 className="text-xl font-extrabold text-center mb-4 text-gray-900 dark:text-[#f0f0ff]">AI Poll Generation</h3>

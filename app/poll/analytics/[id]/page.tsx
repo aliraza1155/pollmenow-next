@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -15,7 +16,7 @@ import {
   Tooltip, Legend, ResponsiveContainer, ComposedChart,
 } from 'recharts';
 
-// ── Helpers ──────────────────────────────────────────────────
+// ── Helper ──────────────────────────────────────────────────
 const computeRegressionLine = (data: any[], yKey: string) => {
   const n = data.length;
   if (n < 2) return null;
@@ -54,6 +55,40 @@ const ChartTooltip = ({ active, payload, label }: any) => {
     </div>
   );
 };
+
+// ---------- Component to blur content for non‑premium users ----------
+function PremiumBlur({
+  children,
+  hasAccess,
+}: {
+  children: React.ReactNode;
+  hasAccess: boolean;
+}) {
+  if (hasAccess) return <>{children}</>;
+
+  return (
+    <div className="relative">
+      <div className="filter blur-[4px] pointer-events-none select-none">
+        {children}
+      </div>
+      <div className="absolute inset-0 flex items-center justify-center bg-white/70 dark:bg-black/60 rounded-2xl">
+        <div className="bg-white dark:bg-[#0f1120] rounded-2xl p-6 text-center shadow-xl border border-gray-200 dark:border-white/10 max-w-sm">
+          <p className="text-4xl mb-2">🔒</p>
+          <p className="text-lg font-bold text-gray-900 dark:text-white">Unlock Advanced Analytics</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 mb-4">
+            Get demographic breakdowns, option‑level insights, AI suggestions, and CSV exports.
+          </p>
+          <Link
+            href="/upgrade"
+            className="inline-block bg-gradient-to-r from-primary to-secondary text-white px-5 py-2 rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition"
+          >
+            Upgrade to Premium →
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function PollAnalyticsPage() {
   const params = useParams();
@@ -150,13 +185,14 @@ export default function PollAnalyticsPage() {
   const totalOptionVotes = optionResults.reduce((s: number, o: any) => s+o.votes, 0);
   const maxVotes = Math.max(...optionResults.map((o: any) => o.votes), 1);
 
-  const isCreator = poll?.creator?.id === user?.uid;
-  // ✅ Fix: provide fallback 'free' for user?.tier
-  const canViewAdvanced = isCreator || hasPremiumAnalytics(user?.tier || 'free') || canViewAdvancedAnalytics(userRole);
   const isPremium = hasPremiumAnalytics(user?.tier || 'free');
+  const canViewRoleAdvanced = canViewAdvancedAnalytics(userRole);
+  // Show advanced content unlocked if the user is Premium OR has a role that allows advanced analytics
+  const hasAdvancedAccess = isPremium || canViewRoleAdvanced;
 
+  // Build data for advanced tabs (always, because we need to pass to PremiumBlur)
   let ageBucketsList: string[] = [], optionsLabels: string[] = [], heatmapData: any = {}, genderOptionData: any[] = [], topCountryPerOption: any[] = [];
-  if (canViewAdvanced && poll.options) {
+  if (poll.options) {
     ageBucketsList = ['18-24','25-34','35-44','45-54','55+'];
     optionsLabels = poll.options.map((o: any) => o.text);
     for (const age of ageBucketsList) {
@@ -181,6 +217,204 @@ export default function PollAnalyticsPage() {
       return { option: opt.text, countryCode: top?.[0], percent: top?.[1] };
     });
   }
+
+  // Advanced tab content – wrapped in PremiumBlur
+  const renderDemographics = () => (
+    <PremiumBlur hasAccess={hasAdvancedAccess}>
+      <div className="space-y-8">
+        <div>
+          <h3 className={labelCls}>Gender</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={genderData}>
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+              <XAxis dataKey="name" tick={{ fill: axisColor, fontSize:11 }} />
+              <YAxis tick={{ fill: axisColor, fontSize:11 }} />
+              <Tooltip content={<ChartTooltip />} />
+              <Bar dataKey="value" name="Voters" fill="#6C5CE7" radius={[4,4,0,0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        <div>
+          <h3 className={labelCls}>Age Groups</h3>
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={ageData}>
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+              <XAxis dataKey="age" tick={{ fill: axisColor, fontSize:11 }} />
+              <YAxis tick={{ fill: axisColor, fontSize:11 }} />
+              <Tooltip content={<ChartTooltip />} />
+              <Bar dataKey="count" name="Voters" fill="#a855f7" radius={[4,4,0,0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        <div>
+          <h3 className={labelCls}>Top Countries</h3>
+          <ResponsiveContainer width="100%" height={Math.max(200, countryData.length * 32)}>
+            <BarChart data={countryData.map(([code, count]) => ({ code, count }))} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+              <XAxis type="number" tick={{ fill: axisColor, fontSize:11 }} />
+              <YAxis type="category" dataKey="code" width={80} tick={{ fill: axisColor, fontSize:11 }} />
+              <Tooltip content={<ChartTooltip />} />
+              <Bar dataKey="count" name="Voters" fill="#e5184c" radius={[0,4,4,0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </PremiumBlur>
+  );
+
+  const renderByOption = () => (
+    <PremiumBlur hasAccess={hasAdvancedAccess}>
+      <div className="space-y-8">
+        <div>
+          <h4 className={labelCls}>Option Summary</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {(poll.options || []).map((opt: any) => {
+              const totalOpt = (optionDemographics[opt.id]?.genderCounts?.male || 0)
+                            + (optionDemographics[opt.id]?.genderCounts?.female || 0)
+                            + (optionDemographics[opt.id]?.genderCounts?.other || 0);
+              const pct = totalVotes ? ((totalOpt / totalVotes) * 100).toFixed(1) : 0;
+              const ageBuck = optionDemographics[opt.id]?.ageBuckets || {};
+              const ageEntries = Object.entries(ageBuck) as [string, number][];
+              const dominantAge = ageEntries.sort((a,b)=>b[1]-a[1])[0]?.[0] || '—';
+              const gender = optionDemographics[opt.id]?.genderCounts || {};
+              const genderEntries = Object.entries(gender) as [string, number][];
+              const dominantGender = genderEntries.sort((a,b)=>b[1]-a[1])[0]?.[0] || '—';
+              const countryEntries = Object.entries(optionDemographics[opt.id]?.countryCounts || {}) as [string, number][];
+              const country = countryEntries.sort((a,b)=>b[1]-a[1])[0]?.[0] || '—';
+              return (
+                <div key={opt.id} className="bg-gray-50 dark:bg-[#161829] rounded-xl p-4 border border-gray-100 dark:border-white/8">
+                  <p className="font-bold text-gray-800 dark:text-gray-100">{opt.text}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">{totalOpt} votes ({pct}%)</p>
+                  <p className="text-xs text-primary mt-1.5">Mostly {dominantAge} · {dominantGender} · from {country}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div>
+          <h4 className={labelCls}>Age × Option Heatmap</h4>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm border-collapse">
+              <thead>
+                <tr>
+                  <th className="p-2 border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#161829] text-gray-700 dark:text-gray-300">Age</th>
+                  {optionsLabels.map(col => (
+                    <th key={col} className="p-2 border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#161829] text-gray-700 dark:text-gray-300">{col}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {ageBucketsList.map(age => (
+                  <tr key={age}>
+                    <td className="p-2 border border-gray-200 dark:border-white/10 font-semibold text-gray-700 dark:text-gray-300">{age}</td>
+                    {optionsLabels.map(col => {
+                      const pct = heatmapData[age]?.[col] || 0;
+                      const intensity = Math.min(0.85, pct / 100);
+                      return (
+                        <td
+                          key={col}
+                          className="p-2 border border-gray-200 dark:border-white/10 text-center text-xs font-semibold"
+                          style={{
+                            backgroundColor: `rgba(108,92,231,${intensity})`,
+                            color: intensity > 0.45 ? '#fff' : undefined,
+                          }}
+                        >
+                          {pct.toFixed(1)}%
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <h4 className={labelCls}>Gender × Option</h4>
+          <div className="space-y-4">
+            {genderOptionData.map((item: any) => {
+              const total = item.male + item.female + item.other;
+              const hasVotes = total > 0;
+              return (
+                <div key={item.option}>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{item.option}</p>
+                  <div className="flex h-6 rounded-full overflow-hidden bg-gray-100 dark:bg-white/6 border border-gray-200 dark:border-white/8">
+                    {hasVotes ? (
+                      <>
+                        {item.male > 0 && (
+                          <div className="bg-primary flex items-center justify-center text-white text-[10px] font-semibold" style={{ width:`${(item.male/total)*100}%` }}>
+                            {Math.round((item.male/total)*100)}%
+                          </div>
+                        )}
+                        {item.female > 0 && (
+                          <div className="bg-secondary flex items-center justify-center text-white text-[10px] font-semibold" style={{ width:`${(item.female/total)*100}%` }}>
+                            {Math.round((item.female/total)*100)}%
+                          </div>
+                        )}
+                        {item.other > 0 && (
+                          <div className="bg-purple-500 flex items-center justify-center text-white text-[10px] font-semibold" style={{ width:`${(item.other/total)*100}%` }}>
+                            {Math.round((item.other/total)*100)}%
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500 text-[10px]">No votes yet</div>
+                    )}
+                  </div>
+                  <div className="flex gap-4 mt-1 text-[10px] text-gray-400 dark:text-gray-500">
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 bg-primary rounded-full inline-block"/>Male</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 bg-secondary rounded-full inline-block"/>Female</span>
+                    <span className="flex items-center gap-1"><span className="w-2 h-2 bg-purple-500 rounded-full inline-block"/>Other</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div>
+          <h4 className={labelCls}>Top Country per Option</h4>
+          <div className="space-y-2 bg-gray-50 dark:bg-[#161829] rounded-xl border border-gray-100 dark:border-white/8 overflow-hidden">
+            {topCountryPerOption.map((item: any, i: number) => (
+              <div key={item.option} className={`flex justify-between px-4 py-3 text-sm ${i !== topCountryPerOption.length-1 ? 'border-b border-gray-100 dark:border-white/6' : ''}`}>
+                <span className="text-gray-700 dark:text-gray-300 truncate flex-1 mr-4">{item.option}</span>
+                <span className="font-semibold text-primary whitespace-nowrap">
+                  {item.countryCode || '—'}{item.percent ? ` (${item.percent})` : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </PremiumBlur>
+  );
+
+  const renderInsights = () => (
+    <PremiumBlur hasAccess={hasAdvancedAccess}>
+      {analytics.aiInsight ? (
+        <div className="bg-purple-50 dark:bg-primary/10 border border-purple-200 dark:border-primary/25 rounded-xl p-5">
+          <p className="text-gray-800 dark:text-gray-200 leading-relaxed">{analytics.aiInsight.text}</p>
+          <div className="mt-4 border-t border-purple-200 dark:border-primary/20 pt-4">
+            <span className="font-semibold text-gray-800 dark:text-gray-100">💡 Suggestion: </span>
+            <span className="text-gray-700 dark:text-gray-300">{analytics.aiInsight.suggestion}</span>
+          </div>
+        </div>
+      ) : (
+        <div className="text-center py-12">
+          <p className="text-5xl mb-3">🤖</p>
+          <p className="text-gray-600 dark:text-gray-400 mb-5">Generate AI-powered insights for this poll.</p>
+          <button
+            onClick={handleAIInsight}
+            disabled={generatingInsight}
+            className="bg-gradient-to-r from-primary to-secondary text-white px-6 py-2.5 rounded-xl text-sm font-semibold shadow hover:shadow-md hover:opacity-90 transition disabled:opacity-50"
+          >
+            {generatingInsight
+              ? <><span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2 align-middle"/>Generating…</>
+              : '✨ Generate Insight'}
+          </button>
+        </div>
+      )}
+    </PremiumBlur>
+  );
 
   const exportPNG = async () => {
     if (!containerRef.current) return;
@@ -245,60 +479,12 @@ export default function PollAnalyticsPage() {
   const axisColor = '#9898a8';
   const gridColor = 'rgba(152,152,168,0.15)';
 
-  const renderHeatmap = () => (
-    <div className="overflow-x-auto">
-      <table className="min-w-full text-sm border-collapse">
-        <thead>
-          <tr>
-            <th className="p-2 border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#161829] text-gray-700 dark:text-gray-300">Age</th>
-            {optionsLabels.map(col => (
-              <th key={col} className="p-2 border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-[#161829] text-gray-700 dark:text-gray-300">{col}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {ageBucketsList.map(age => (
-            <tr key={age}>
-              <td className="p-2 border border-gray-200 dark:border-white/10 font-semibold text-gray-700 dark:text-gray-300">{age}</td>
-              {optionsLabels.map(col => {
-                const pct = heatmapData[age]?.[col] || 0;
-                const intensity = Math.min(0.85, pct / 100);
-                return (
-                  <td
-                    key={col}
-                    className="p-2 border border-gray-200 dark:border-white/10 text-center text-xs font-semibold"
-                    style={{
-                      backgroundColor: `rgba(108,92,231,${intensity})`,
-                      color: intensity > 0.45 ? '#fff' : undefined,
-                    }}
-                  >
-                    {pct.toFixed(1)}%
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-
-  const KpiCard = ({ value, label, sub, subGreen }: any) => (
-    <div className={`${cardCls} p-4 text-center`}>
-      <div className="text-2xl font-extrabold text-primary">{value}</div>
-      <div className={subCls + ' mt-0.5'}>{label}</div>
-      {sub && <div className={`text-[10px] mt-0.5 ${subGreen ? 'text-green-500 dark:text-green-400' : subCls}`}>{sub}</div>}
-    </div>
-  );
-
   const tabs = [
-    { key:'overview', label:'Overview' },
-    { key:'options', label:'Results' },
-    ...(canViewAdvanced ? [
-      { key:'demographics', label:'Demographics' },
-      { key:'byOption', label:'By Option' },
-      { key:'insights', label:'AI Insights' },
-    ] : []),
+    { key: 'overview', label: 'Overview' },
+    { key: 'options', label: 'Results' },
+    { key: 'demographics', label: 'Demographics' },
+    { key: 'byOption', label: 'By Option' },
+    { key: 'insights', label: 'AI Insights' },
   ];
 
   const ExportBtn = ({ onClick, loading: btnLoading, children }: any) => (
@@ -418,167 +604,24 @@ export default function PollAnalyticsPage() {
               </div>
             )}
 
-            {activeTab === 'demographics' && canViewAdvanced && (
-              <div className="space-y-8">
-                <div>
-                  <h3 className={labelCls}>Gender</h3>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <BarChart data={genderData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                      <XAxis dataKey="name" tick={{ fill: axisColor, fontSize:11 }} />
-                      <YAxis tick={{ fill: axisColor, fontSize:11 }} />
-                      <Tooltip content={<ChartTooltip />} />
-                      <Bar dataKey="value" name="Voters" fill="#6C5CE7" radius={[4,4,0,0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                <div>
-                  <h3 className={labelCls}>Age Groups</h3>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <BarChart data={ageData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                      <XAxis dataKey="age" tick={{ fill: axisColor, fontSize:11 }} />
-                      <YAxis tick={{ fill: axisColor, fontSize:11 }} />
-                      <Tooltip content={<ChartTooltip />} />
-                      <Bar dataKey="count" name="Voters" fill="#a855f7" radius={[4,4,0,0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                <div>
-                  <h3 className={labelCls}>Top Countries</h3>
-                  <ResponsiveContainer width="100%" height={Math.max(200, countryData.length * 32)}>
-                    <BarChart data={countryData.map(([code, count]) => ({ code, count }))} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
-                      <XAxis type="number" tick={{ fill: axisColor, fontSize:11 }} />
-                      <YAxis type="category" dataKey="code" width={80} tick={{ fill: axisColor, fontSize:11 }} />
-                      <Tooltip content={<ChartTooltip />} />
-                      <Bar dataKey="count" name="Voters" fill="#e5184c" radius={[0,4,4,0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'byOption' && canViewAdvanced && (
-              <div className="space-y-8">
-                <div>
-                  <h4 className={labelCls}>Option Summary</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {(poll.options || []).map((opt: any) => {
-                      const totalOpt = (optionDemographics[opt.id]?.genderCounts?.male || 0)
-                                    + (optionDemographics[opt.id]?.genderCounts?.female || 0)
-                                    + (optionDemographics[opt.id]?.genderCounts?.other || 0);
-                      const pct = totalVotes ? ((totalOpt / totalVotes) * 100).toFixed(1) : 0;
-                      const ageBuck = optionDemographics[opt.id]?.ageBuckets || {};
-                      const ageEntries = Object.entries(ageBuck) as [string, number][];
-                      const dominantAge = ageEntries.sort((a,b)=>b[1]-a[1])[0]?.[0] || '—';
-                      const gender = optionDemographics[opt.id]?.genderCounts || {};
-                      const genderEntries = Object.entries(gender) as [string, number][];
-                      const dominantGender = genderEntries.sort((a,b)=>b[1]-a[1])[0]?.[0] || '—';
-                      const countryEntries = Object.entries(optionDemographics[opt.id]?.countryCounts || {}) as [string, number][];
-                      const country = countryEntries.sort((a,b)=>b[1]-a[1])[0]?.[0] || '—';
-                      return (
-                        <div key={opt.id} className="bg-gray-50 dark:bg-[#161829] rounded-xl p-4 border border-gray-100 dark:border-white/8">
-                          <p className="font-bold text-gray-800 dark:text-gray-100">{opt.text}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">{totalOpt} votes ({pct}%)</p>
-                          <p className="text-xs text-primary mt-1.5">Mostly {dominantAge} · {dominantGender} · from {country}</p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div>
-                  <h4 className={labelCls}>Age × Option Heatmap</h4>
-                  {renderHeatmap()}
-                </div>
-                <div>
-                  <h4 className={labelCls}>Gender × Option</h4>
-                  <div className="space-y-4">
-                    {genderOptionData.map((item: any) => {
-                      const total = item.male + item.female + item.other;
-                      const hasVotes = total > 0;
-                      return (
-                        <div key={item.option}>
-                          <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">{item.option}</p>
-                          <div className="flex h-6 rounded-full overflow-hidden bg-gray-100 dark:bg-white/6 border border-gray-200 dark:border-white/8">
-                            {hasVotes ? (
-                              <>
-                                {item.male > 0 && (
-                                  <div className="bg-primary flex items-center justify-center text-white text-[10px] font-semibold" style={{ width:`${(item.male/total)*100}%` }}>
-                                    {Math.round((item.male/total)*100)}%
-                                  </div>
-                                )}
-                                {item.female > 0 && (
-                                  <div className="bg-secondary flex items-center justify-center text-white text-[10px] font-semibold" style={{ width:`${(item.female/total)*100}%` }}>
-                                    {Math.round((item.female/total)*100)}%
-                                  </div>
-                                )}
-                                {item.other > 0 && (
-                                  <div className="bg-purple-500 flex items-center justify-center text-white text-[10px] font-semibold" style={{ width:`${(item.other/total)*100}%` }}>
-                                    {Math.round((item.other/total)*100)}%
-                                  </div>
-                                )}
-                              </>
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500 text-[10px]">No votes yet</div>
-                            )}
-                          </div>
-                          <div className="flex gap-4 mt-1 text-[10px] text-gray-400 dark:text-gray-500">
-                            <span className="flex items-center gap-1"><span className="w-2 h-2 bg-primary rounded-full inline-block"/>Male</span>
-                            <span className="flex items-center gap-1"><span className="w-2 h-2 bg-secondary rounded-full inline-block"/>Female</span>
-                            <span className="flex items-center gap-1"><span className="w-2 h-2 bg-purple-500 rounded-full inline-block"/>Other</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div>
-                  <h4 className={labelCls}>Top Country per Option</h4>
-                  <div className="space-y-2 bg-gray-50 dark:bg-[#161829] rounded-xl border border-gray-100 dark:border-white/8 overflow-hidden">
-                    {topCountryPerOption.map((item: any, i: number) => (
-                      <div key={item.option} className={`flex justify-between px-4 py-3 text-sm ${i !== topCountryPerOption.length-1 ? 'border-b border-gray-100 dark:border-white/6' : ''}`}>
-                        <span className="text-gray-700 dark:text-gray-300 truncate flex-1 mr-4">{item.option}</span>
-                        <span className="font-semibold text-primary whitespace-nowrap">
-                          {item.countryCode || '—'}{item.percent ? ` (${item.percent})` : ''}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'insights' && canViewAdvanced && (
-              <div>
-                {analytics.aiInsight ? (
-                  <div className="bg-purple-50 dark:bg-primary/10 border border-purple-200 dark:border-primary/25 rounded-xl p-5">
-                    <p className="text-gray-800 dark:text-gray-200 leading-relaxed">{analytics.aiInsight.text}</p>
-                    <div className="mt-4 border-t border-purple-200 dark:border-primary/20 pt-4">
-                      <span className="font-semibold text-gray-800 dark:text-gray-100">💡 Suggestion: </span>
-                      <span className="text-gray-700 dark:text-gray-300">{analytics.aiInsight.suggestion}</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <p className="text-5xl mb-3">🤖</p>
-                    <p className="text-gray-600 dark:text-gray-400 mb-5">Generate AI-powered insights for this poll.</p>
-                    <button
-                      onClick={handleAIInsight}
-                      disabled={generatingInsight}
-                      className="bg-gradient-to-r from-primary to-secondary text-white px-6 py-2.5 rounded-xl text-sm font-semibold shadow hover:shadow-md hover:opacity-90 transition disabled:opacity-50"
-                    >
-                      {generatingInsight
-                        ? <><span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2 align-middle"/>Generating…</>
-                        : '✨ Generate Insight'}
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
+            {activeTab === 'demographics' && renderDemographics()}
+            {activeTab === 'byOption' && renderByOption()}
+            {activeTab === 'insights' && renderInsights()}
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function KpiCard({ value, label, sub, subGreen }: any) {
+  const cardCls = 'bg-white dark:bg-[#0f1120] rounded-xl border border-gray-100 dark:border-white/8 shadow-sm';
+  const subCls = 'text-xs text-gray-500 dark:text-gray-400';
+  return (
+    <div className={`${cardCls} p-4 text-center`}>
+      <div className="text-2xl font-extrabold text-primary">{value}</div>
+      <div className={subCls + ' mt-0.5'}>{label}</div>
+      {sub && <div className={`text-[10px] mt-0.5 ${subGreen ? 'text-green-500 dark:text-green-400' : subCls}`}>{sub}</div>}
     </div>
   );
 }
