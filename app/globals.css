@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+@theme {
+  --color-primary: #6C5CE7;
+  --color-secondary: #a855f7;
+  --color-accent: #ec4899;
+}
+
+
 /* ─── BREAKPOINTS (used throughout) ──────────────────────────
    xs:  0–479px   (small phones)
    sm:  480–639px (large phones)
